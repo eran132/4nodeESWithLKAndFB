@@ -1,0 +1,20 @@
+#=========================== Filebeat autodiscover ==============================
+filebeat.autodiscover:
+# Autodiscover docker containers and parse logs
+  providers:
+    - type: docker
+      containers.ids: '*'
+
+output.logstash:
+  hosts: ["127.0.0.1:5044"]
+
+# filebeat.inputs:
+# - type: docker
+#   containers.ids: '*'
+#   path: "/var/lib/docker/containers"
+#   hosts: ["elasticsearch:9200"]
+#   multiline.pattern: '^\['
+#   multiline.negate: true
+#   multiline.match: after
+#filebeat.modules:
+# - module: system

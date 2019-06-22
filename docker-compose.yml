@@ -1,0 +1,175 @@
+version: "2.2"
+services:
+  elasticsearch:
+    build: ./elasticsearch
+    container_name: elasticsearch
+    environment:
+        - node.name=elasticsearch
+        - cluster.initial_master_nodes=elasticsearch,elasticsearch2
+        - cluster.name=docker-cluster
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    volumes:
+        - esdata01:/usr/share/elasticsearch/data
+    ports:
+        - 9200
+        - 9300
+
+    networks:
+      - esnet
+    depends_on:
+      - logstash
+
+
+
+  elasticsearch2:
+    build: ./elasticsearch
+    container_name: elasticsearch2
+    environment:
+        - node.name=elasticsearch2
+        - discovery.seed_hosts=elasticsearch,elasticsearch3,elasticsearch4
+        - cluster.initial_master_nodes=elasticsearch
+        - cluster.name=docker-cluster
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    volumes:
+        - esdata02:/usr/share/elasticsearch/data
+    
+    networks:
+      - esnet
+    depends_on:
+      - logstash
+    
+  elasticsearch3:
+    build: ./elasticsearch
+    container_name: elasticsearch3
+    environment:
+        - node.name=elasticsearch3
+        - discovery.seed_hosts=elasticsearch,elasticsearch2,elasticsearch4
+        - cluster.initial_master_nodes=elasticsearch
+        - cluster.name=docker-cluster
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    volumes:
+        - esdata03:/usr/share/elasticsearch/data
+    
+    networks:
+      - esnet
+    depends_on:
+      - logstash 
+
+  elasticsearch4:
+    build: ./elasticsearch
+    container_name: elasticsearch4
+    environment:
+        - node.name=elasticsearch4
+        - discovery.seed_hosts=elasticsearch,elasticsearch2,elasticsearch3
+        - cluster.initial_master_nodes=elasticsearch
+        - cluster.name=docker-cluster
+        - bootstrap.memory_lock=true
+        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    volumes:
+        - esdata04:/usr/share/elasticsearch/data
+    
+    networks:
+      - esnet
+    depends_on:
+      - logstash
+  
+  filebeat:
+    build:  ./filebeat
+    networks: 
+      - esnet
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    environment:      
+           - ELASTICSEARCH_HOST=elasticsearch:9200    
+           # disable strict permission checks    
+    command: ["--strict.perms=false"]      
+    volumes: 
+        - filebeat_data:/usr/share/filebeat/data:rw
+        - /var/lib/docker/containers:/usr/share/dockerlogs/data/:ro
+        - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - elasticsearch
+    restart: unless-stopped
+
+  kibana:
+    build: ./kibana
+    environment: 
+      - ELASTICSEARCH_URL=http://elasticsearch:9200
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    volumes:
+        - kibana:/usr/share/kibana/data
+    ports: 
+        - 5601:5601
+    networks:
+      - esnet
+    depends_on: 
+      - elasticsearch
+    restart: unless-stopped
+
+ 
+  logstash:
+    build: ./logstash
+    environment: 
+      - "LS_JAVA_OPTS=-Xms1g -Xmx1g"
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    volumes:
+        - ./logstash/config/logstash.conf/:/usr/share/logstash/pipeline/logstash.conf
+        - logstash:/usr/share/logstash/data
+    ports:
+        - "5000:5000"
+        - "9600:9600"
+    networks:
+      - esnet
+    restart: unless-stopped
+
+    # logging:
+    #   driver: syslog
+    #   options:
+    #     syslog-address: "tcp://:5000"
+
+
+
+volumes: 
+  esdata01:
+    driver: local
+  esdata02:
+    driver: local
+  esdata03:
+    driver: local
+  esdata04:
+    driver: local
+  kibana:
+    driver: local
+  logstash:
+    driver: local
+  filebeat_data:
+    driver: local    
+networks: 
+  esnet:
