@@ -1,3 +1,4 @@
-ARG ELK_VERSION
+FROM sebp/elk
 
-FROM elasticsearch:${ELK_VERSION}
+ENV ES_HOME /opt/elasticsearch
+WORKDIR ${ES_HOME}

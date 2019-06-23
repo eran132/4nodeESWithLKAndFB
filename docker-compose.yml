@@ -3,19 +3,6 @@ services:
   elasticsearch:
     build:
       context: ./elasticsearch
-      args:
-        ELK_VERSION: $ELK_VERSION
-    
-    environment:
-        - node.name=elasticsearch
-        - node.master=true
-        - cluster.initial_master_nodes=elasticsearch
-        - cluster.name=docker-cluster
-        - bootstrap.memory_lock=true
-        - discovery.zen.ping.unicast.hosts=elasticsearch
-        - node.max_local_storage_nodes=4
-
-        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ulimits:
         memlock:
           soft: -1
@@ -25,19 +12,16 @@ services:
     ports:
         - 9200
         - 9300
-
+    expose:
+        - 9200
     networks:
-      - ${ELK_NET}
+      - esnet
     depends_on:
       - logstash
-    logging:
-      driver: syslog
 
   filebeat:
     build:
       context:  ./filebeat
-      args:
-        ELK_VERSION: $ELK_VERSION
     ulimits:
         memlock:
           soft: -1
@@ -50,10 +34,8 @@ services:
         - filebeat_data:/usr/share/filebeat/data:rw
         - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
         - /var/run/docker.sock:/var/run/docker.sock
-    ports: 
-        - 5044:5044
     networks:
-      - ${ELK_NET}
+      - esnet
     depends_on:
       - elasticsearch
     restart: unless-stopped
@@ -61,8 +43,6 @@ services:
   kibana:
     build:
       context: ./kibana
-      args:
-        ELK_VERSION: $ELK_VERSION
 
     environment: 
       - ELASTICSEARCH_URL=http://elasticsearch:9200
@@ -75,7 +55,7 @@ services:
     ports: 
         - 5601:5601
     networks:
-      - ${ELK_NET}
+      - esnet
     depends_on: 
       - elasticsearch
     restart: unless-stopped
@@ -84,11 +64,9 @@ services:
   logstash:
     build:
       context: ./logstash
-      args:
-        ELK_VERSION: $ELK_VERSION
-
     environment: 
-      - "LS_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "LS_JAVA_OPTS=-Xms1g -Xmx1g"
+
     ulimits:
         memlock:
           soft: -1
@@ -98,10 +76,11 @@ services:
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
 
     ports:
+        - "5044"
         - "5000:5000"
         - "9600:9600"
     networks:
-      - ${ELK_NET}
+      - esnet
     restart: unless-stopped
 
 volumes: 
