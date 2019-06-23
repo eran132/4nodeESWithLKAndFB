@@ -5,21 +5,23 @@ services:
       context: ./elasticsearch
       args:
         ELK_VERSION: $ELK_VERSION
-    container_name: elasticsearch
+    
     environment:
         - node.name=elasticsearch
-        - cluster.initial_master_nodes=elasticsearch,elasticsearch2
+        - node.master=true
+        - cluster.initial_master_nodes=elasticsearch
         - cluster.name=docker-cluster
         - bootstrap.memory_lock=true
         - discovery.zen.ping.unicast.hosts=elasticsearch
+        - node.max_local_storage_nodes=4
 
-        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ulimits:
         memlock:
           soft: -1
           hard: -1
     volumes:
-        - esdata01:/usr/share/elasticsearch/data
+        - esdata:/usr/share/elasticsearch/data
     ports:
         - 9200
         - 9300
@@ -28,6 +30,8 @@ services:
       - ${ELK_NET}
     depends_on:
       - logstash
+    logging:
+      driver: syslog
 
   filebeat:
     build:
@@ -84,13 +88,13 @@ services:
         ELK_VERSION: $ELK_VERSION
 
     environment: 
-      - "LS_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "LS_JAVA_OPTS=-Xms512m -Xmx512m"
     ulimits:
         memlock:
           soft: -1
           hard: -1
     volumes:
-      #- ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
 
     ports:
@@ -101,13 +105,7 @@ services:
     restart: unless-stopped
 
 volumes: 
-  esdata01:
-    driver: local
-  esdata02:
-    driver: local
-  esdata03:
-    driver: local
-  esdata04:
+  esdata:
     driver: local
   kibana:
     driver: local
