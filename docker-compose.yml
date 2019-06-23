@@ -1,7 +1,10 @@
 version: "2.2"
 services:
   elasticsearch:
-    build: ./elasticsearch
+    build:
+      context: ./elasticsearch
+      args:
+        ELK_VERSION: $ELK_VERSION
     container_name: elasticsearch
     environment:
         - node.name=elasticsearch
@@ -20,12 +23,15 @@ services:
         - 9300
 
     networks:
-      - esnet
+      - ${ELK_NET}
     depends_on:
       - logstash
 
   elasticsearch2:
-    build: ./elasticsearch
+    build:
+      context: ./elasticsearch
+      args:
+        ELK_VERSION: $ELK_VERSION
     container_name: elasticsearch2
     environment:
         - node.name=elasticsearch2
@@ -42,12 +48,15 @@ services:
         - esdata02:/usr/share/elasticsearch/data
     
     networks:
-      - esnet
+      - ${ELK_NET}
     depends_on:
       - logstash
     
   elasticsearch3:
-    build: ./elasticsearch
+    build:
+      context: ./elasticsearch
+      args:
+        ELK_VERSION: $ELK_VERSION
     container_name: elasticsearch3
     environment:
         - node.name=elasticsearch3
@@ -64,12 +73,15 @@ services:
         - esdata03:/usr/share/elasticsearch/data
     
     networks:
-      - esnet
+      - ${ELK_NET}
     depends_on:
       - logstash 
 
   elasticsearch4:
-    build: ./elasticsearch
+    build: 
+      context: ./elasticsearch
+      args:
+        ELK_VERSION: $ELK_VERSION
     container_name: elasticsearch4
     environment:
         - node.name=elasticsearch4
@@ -86,14 +98,15 @@ services:
         - esdata04:/usr/share/elasticsearch/data
     
     networks:
-      - esnet
+      - ${ELK_NET}
     depends_on:
       - logstash
   
   filebeat:
-    build:  ./filebeat
-    networks: 
-      - esnet
+    build:
+      context:  ./filebeat
+      args:
+        ELK_VERSION: $ELK_VERSION
     ulimits:
         memlock:
           soft: -1
@@ -106,12 +119,20 @@ services:
         - filebeat_data:/usr/share/filebeat/data:rw
         - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
         - /var/run/docker.sock:/var/run/docker.sock
+    ports: 
+        - 5044:5044
+    networks:
+      - ${ELK_NET}
     depends_on:
       - elasticsearch
     restart: unless-stopped
 
   kibana:
-    build: ./kibana
+    build:
+      context: ./kibana
+      args:
+        ELK_VERSION: $ELK_VERSION
+
     environment: 
       - ELASTICSEARCH_URL=http://elasticsearch:9200
     ulimits:
@@ -123,14 +144,18 @@ services:
     ports: 
         - 5601:5601
     networks:
-      - esnet
+      - ${ELK_NET}
     depends_on: 
       - elasticsearch
     restart: unless-stopped
 
  
   logstash:
-    build: ./logstash
+    build:
+      context: ./logstash
+      args:
+        ELK_VERSION: $ELK_VERSION
+
     environment: 
       - "LS_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
@@ -138,13 +163,14 @@ services:
           soft: -1
           hard: -1
     volumes:
-        - ./logstash/config/logstash.conf/:/usr/share/logstash/pipeline/logstash.conf
-        - logstash:/usr/share/logstash/data
+      #- ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+
     ports:
         - "5000:5000"
         - "9600:9600"
     networks:
-      - esnet
+      - ${ELK_NET}
     restart: unless-stopped
 
 volumes: 
@@ -164,3 +190,4 @@ volumes:
     driver: local    
 networks: 
   esnet:
+    driver: bridge
