@@ -149,13 +149,6 @@ services:
       - esnet
     restart: unless-stopped
 
-    # logging:
-    #   driver: syslog
-    #   options:
-    #     syslog-address: "tcp://:5000"
-
-
-
 volumes: 
   esdata01:
     driver: local
