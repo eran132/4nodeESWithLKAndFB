@@ -24,8 +24,6 @@ services:
     depends_on:
       - logstash
 
-
-
   elasticsearch2:
     build: ./elasticsearch
     container_name: elasticsearch2
