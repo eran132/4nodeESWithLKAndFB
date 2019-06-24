@@ -32,6 +32,40 @@ services:
     volumes:
       - /opt/elk/logstash/conf.d:/etc/logstash/conf.d
     privileged: true  
+  elk3:
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms2048m -Xmx2048m"
+    image: sebp/elk:es241_l240_k461
+    networks:
+      - elk_net
+    ports:
+      - "5603:5601"
+      - "9202:9200"
+      - "9302:9300"
+      - "5046:5044"
+    depends_on:
+      - elk1  
+    volumes:
+      - /opt/elk/logstash/conf.d:/etc/logstash/conf.d
+    privileged: true
+  elk4:
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms2048m -Xmx2048m"
+    image: sebp/elk:es241_l240_k461
+    networks:
+      - elk_net
+    ports:
+      - "5603:5601"
+      - "9202:9200"
+      - "9302:9300"
+      - "5046:5044"
+    depends_on:
+      - elk1  
+    volumes:
+      - /opt/elk/logstash/conf.d:/etc/logstash/conf.d
+    privileged: true        
 networks:
   elk_net:
     driver: bridge
