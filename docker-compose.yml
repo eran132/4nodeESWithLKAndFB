@@ -30,8 +30,6 @@ services:
       - ${ELK_NET}
     depends_on:
       - logstash
-    logging:
-      driver: syslog
 
   filebeat:
     build:
