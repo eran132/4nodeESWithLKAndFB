@@ -5,12 +5,15 @@ services:
       context: ./elasticsearch
       args: 
         ELK_VERSION: $ELK_VERSION
+    environment: 
+      node.max_local_storage_nodes: 4
+      cluster.initial_master_nodes: elasticsearch
     ulimits:
         memlock:
           soft: -1
           hard: -1
     volumes:
-        - esdata:/usr/share/elasticsearch/data
+        - esdata:/usr/share/elasticsearch/data:rw
     ports:
         - 9200
         - 9300
