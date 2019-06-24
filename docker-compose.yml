@@ -1,116 +1,37 @@
-version: "2.2"
+version: '2'
 services:
-  elasticsearch:
-    build:
-      context: ./elasticsearch
-      args:
-        ELK_VERSION: $ELK_VERSION
-    
+  elk1:
     environment:
-        - node.name=elasticsearch
-        - node.master=true
-        - cluster.initial_master_nodes=elasticsearch
-        - cluster.name=docker-cluster
-        - bootstrap.memory_lock=true
-        - discovery.zen.ping.unicast.hosts=elasticsearch
-        - node.max_local_storage_nodes=4
-
-        - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-        memlock:
-          soft: -1
-          hard: -1
-    volumes:
-        - esdata:/usr/share/elasticsearch/data
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms2048m -Xmx2048m"
+    image: sebp/elk:es241_l240_k461
+    networks:
+      - elk_net
     ports:
-        - 9200
-        - 9300
-
-    networks:
-      - ${ELK_NET}
-    depends_on:
-      - logstash
-
-  filebeat:
-    build:
-      context:  ./filebeat
-      args:
-        ELK_VERSION: $ELK_VERSION
-    ulimits:
-        memlock:
-          soft: -1
-          hard: -1
-    environment:      
-           - ELASTICSEARCH_HOST=elasticsearch:9200    
-           # disable strict permission checks    
-    command: ["--strict.perms=false"]      
-    volumes: 
-        - filebeat_data:/usr/share/filebeat/data:rw
-        - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
-        - /var/run/docker.sock:/var/run/docker.sock
-    ports: 
-        - 5044:5044
-    networks:
-      - ${ELK_NET}
-    depends_on:
-      - elasticsearch
-    restart: unless-stopped
-
-  kibana:
-    build:
-      context: ./kibana
-      args:
-        ELK_VERSION: $ELK_VERSION
-
-    environment: 
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
-    ulimits:
-        memlock:
-          soft: -1
-          hard: -1
+      - "5601:5601"
+      - "9200:9200"
+      - "9300:9300"
+      - "5044:5044" 
     volumes:
-        - kibana:/usr/share/kibana/data
-    ports: 
-        - 5601:5601
+      - /opt/elk/logstash/conf.d:/etc/logstash/conf.d
+    privileged: true
+  elk2:
+    environment:
+      - bootstrap.memory_lock=true
+      - "ES_JAVA_OPTS=-Xms2048m -Xmx2048m"
+    image: sebp/elk:es241_l240_k461
     networks:
-      - ${ELK_NET}
-    depends_on: 
-      - elasticsearch
-    restart: unless-stopped
-
- 
-  logstash:
-    build:
-      context: ./logstash
-      args:
-        ELK_VERSION: $ELK_VERSION
-
-    environment: 
-      - "LS_JAVA_OPTS=-Xms512m -Xmx512m"
-    ulimits:
-        memlock:
-          soft: -1
-          hard: -1
-    volumes:
-      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
-      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-
+      - elk_net
     ports:
-        - "5000:5000"
-        - "9600:9600"
-    networks:
-      - ${ELK_NET}
-    restart: unless-stopped
-
-volumes: 
-  esdata:
-    driver: local
-  kibana:
-    driver: local
-  logstash:
-    driver: local
-  filebeat_data:
-    driver: local    
-networks: 
-  esnet:
+      - "5602:5601"
+      - "9201:9200"
+      - "9301:9300"
+      - "5045:5044"
+    depends_on:
+      - elk1  
+    volumes:
+      - /opt/elk/logstash/conf.d:/etc/logstash/conf.d
+    privileged: true  
+networks:
+  elk_net:
     driver: bridge
