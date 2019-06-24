@@ -3,110 +3,27 @@ services:
   elasticsearch:
     build:
       context: ./elasticsearch
-      args:
-        ELK_VERSION: $ELK_VERSION
-    container_name: elasticsearch
-    environment:
-        - node.name=elasticsearch
-        - cluster.initial_master_nodes=elasticsearch,elasticsearch2
-        - cluster.name=docker-cluster
-        - bootstrap.memory_lock=true
-        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
         memlock:
           soft: -1
           hard: -1
     volumes:
-        - esdata01:/usr/share/elasticsearch/data
+        - esdata:/usr/share/elasticsearch/data
     ports:
         - 9200
         - 9300
-
+    expose:
+        - 9200
     networks:
-      - ${ELK_NET}
+      - esnet
     depends_on:
       - logstash
+    restart: unless-stopped
 
-  elasticsearch2:
-    build:
-      context: ./elasticsearch
-      args:
-        ELK_VERSION: $ELK_VERSION
-    container_name: elasticsearch2
-    environment:
-        - node.name=elasticsearch2
-        - discovery.seed_hosts=elasticsearch,elasticsearch3,elasticsearch4
-        - cluster.initial_master_nodes=elasticsearch
-        - cluster.name=docker-cluster
-        - bootstrap.memory_lock=true
-        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-    ulimits:
-        memlock:
-          soft: -1
-          hard: -1
-    volumes:
-        - esdata02:/usr/share/elasticsearch/data
-    
-    networks:
-      - ${ELK_NET}
-    depends_on:
-      - logstash
-    
-  elasticsearch3:
-    build:
-      context: ./elasticsearch
-      args:
-        ELK_VERSION: $ELK_VERSION
-    container_name: elasticsearch3
-    environment:
-        - node.name=elasticsearch3
-        - discovery.seed_hosts=elasticsearch,elasticsearch2,elasticsearch4
-        - cluster.initial_master_nodes=elasticsearch
-        - cluster.name=docker-cluster
-        - bootstrap.memory_lock=true
-        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-    ulimits:
-        memlock:
-          soft: -1
-          hard: -1
-    volumes:
-        - esdata03:/usr/share/elasticsearch/data
-    
-    networks:
-      - ${ELK_NET}
-    depends_on:
-      - logstash 
 
-  elasticsearch4:
-    build: 
-      context: ./elasticsearch
-      args:
-        ELK_VERSION: $ELK_VERSION
-    container_name: elasticsearch4
-    environment:
-        - node.name=elasticsearch4
-        - discovery.seed_hosts=elasticsearch,elasticsearch2,elasticsearch3
-        - cluster.initial_master_nodes=elasticsearch
-        - cluster.name=docker-cluster
-        - bootstrap.memory_lock=true
-        - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
-    ulimits:
-        memlock:
-          soft: -1
-          hard: -1
-    volumes:
-        - esdata04:/usr/share/elasticsearch/data
-    
-    networks:
-      - ${ELK_NET}
-    depends_on:
-      - logstash
-  
   filebeat:
     build:
       context:  ./filebeat
-      args:
-        ELK_VERSION: $ELK_VERSION
     ulimits:
         memlock:
           soft: -1
@@ -119,10 +36,8 @@ services:
         - filebeat_data:/usr/share/filebeat/data:rw
         - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
         - /var/run/docker.sock:/var/run/docker.sock
-    ports: 
-        - 5044:5044
     networks:
-      - ${ELK_NET}
+      - esnet
     depends_on:
       - elasticsearch
     restart: unless-stopped
@@ -130,8 +45,6 @@ services:
   kibana:
     build:
       context: ./kibana
-      args:
-        ELK_VERSION: $ELK_VERSION
 
     environment: 
       - ELASTICSEARCH_URL=http://elasticsearch:9200
@@ -144,7 +57,7 @@ services:
     ports: 
         - 5601:5601
     networks:
-      - ${ELK_NET}
+      - esnet
     depends_on: 
       - elasticsearch
     restart: unless-stopped
@@ -153,34 +66,27 @@ services:
   logstash:
     build:
       context: ./logstash
-      args:
-        ELK_VERSION: $ELK_VERSION
-
     environment: 
-      - "LS_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "LS_JAVA_OPTS=-Xms256m -Xmx256m"
+
     ulimits:
         memlock:
           soft: -1
           hard: -1
     volumes:
-      #- ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
 
     ports:
+        - "5044"
         - "5000:5000"
         - "9600:9600"
     networks:
-      - ${ELK_NET}
+      - esnet
     restart: unless-stopped
 
 volumes: 
-  esdata01:
-    driver: local
-  esdata02:
-    driver: local
-  esdata03:
-    driver: local
-  esdata04:
+  esdata:
     driver: local
   kibana:
     driver: local
