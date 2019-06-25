@@ -1,31 +1,96 @@
 version: "2.2"
 services:
-  elasticsearch:
+  es01:
     build:
       context: ./elasticsearch
       args: 
         ELK_VERSION: $ELK_VERSION
+    container_name: es01
     environment: 
-      node.max_local_storage_nodes: 4
-      cluster.initial_master_nodes: elasticsearch
-      discovery.seed_hosts: elasticsearch
-      
-      ES_JAVA_OPTS: "-Xms1g -Xmx1g"
+      - node.name=es01
+      - discovery.seed_hosts=es02,es03,es04
+      - cluster.initial_master_nodes=es01,es02,es03,es04
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true      
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
     ulimits:
         memlock:
           soft: -1
           hard: -1
     volumes:
-        - esdata:/usr/share/elasticsearch/data:rw
+      - esdata01:/usr/share/elasticsearch/data
     ports:
-        - 9200
-        - 9300
-    expose:
-        - 9200
+      - 9200
     networks:
       - esnet
-    restart: unless-stopped
   
+  es02:
+    build:
+      context: ./elasticsearch
+      args: 
+        ELK_VERSION: $ELK_VERSION
+    container_name: es02
+    environment: 
+      - node.name=es02
+      - discovery.seed_hosts=es01,es03,es04
+      - cluster.initial_master_nodes=es01,es02,es03,es04
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true      
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    volumes:
+      - esdata02:/usr/share/elasticsearch/data
+
+    networks:
+      - esnet
+  es03:
+    build:
+      context: ./elasticsearch
+      args: 
+        ELK_VERSION: $ELK_VERSION
+    container_name: es03
+    environment: 
+      - node.name=es03
+      - discovery.seed_hosts=es01,es03,es04
+      - cluster.initial_master_nodes=es01,es02,es03,es04
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true      
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    volumes:
+      - esdata03:/usr/share/elasticsearch/data
+
+    networks:
+      - esnet
+  es04:
+    build:
+      context: ./elasticsearch
+      args: 
+        ELK_VERSION: $ELK_VERSION
+    container_name: es04
+    environment: 
+      - node.name=es04
+      - discovery.seed_hosts=es01,es02,es03
+      - cluster.initial_master_nodes=es01,es02,es03,es04
+      - cluster.name=docker-cluster
+      - bootstrap.memory_lock=true      
+      - "ES_JAVA_OPTS=-Xms128m -Xmx128m"
+    ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+    volumes:
+      - esdata04:/usr/share/elasticsearch/data
+
+    networks:
+      - esnet  
+
   logstash:
     build:
       context: ./logstash
@@ -36,15 +101,13 @@ services:
           soft: -1
           hard: -1
     environment: 
-      LS_JAVA_OPTS: "-Xms1g -Xmx1g"
+      - "LS_JAVA_OPTS=-Xms128m -Xmx128m"
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:rw
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-
     ports:
-        - "5044"
-        - "5000:5000"
-        - "9600:9600"
+        - 5000:5000
+        - 9600:9600
     networks:
       - esnet
     restart: unless-stopped
@@ -54,7 +117,7 @@ services:
       args:
         ELK_VERSION: $ELK_VERSION
     environment: 
-      - ELASTICSEARCH_URL=http://elasticsearch:9200
+      - "ELASTICSEARCH_HOSTS=http://es01:9200"
     ulimits:
         memlock:
           soft: -1
@@ -65,16 +128,41 @@ services:
         - 5601:5601
     networks:
       - esnet
-    depends_on: 
-      - elasticsearch
     restart: unless-stopped
 
+  # # filebeat:
+  # #   build:
+  # #     context:  ./filebeat
+  # #   ulimits:
+  # #       memlock:
+  # #         soft: -1
+  # #         hard: -1
+  # #   # environment:      
+  # #   #        - ELASTICSEARCH_HOST=elasticsearch:9200    
+  # #   #        # disable strict permission checks    
+  # #   # command: ["--strict.perms=false"]      
+  # #   volumes: 
+  # #       - filebeat_data:/usr/share/filebeat/data:rw
+  # #       - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
+  # #       - /var/run/docker.sock:/var/run/docker.sock
+  # #   networks:
+  # #     - esnet
+  # #   # depends_on:
+  # #   #   - elasticsearch
+  # #   restart: unless-stopped  
 
 volumes: 
-  esdata:
+  esdata01:
+    driver: local
+  esdata02:
+    driver: local
+  esdata03:
+    driver: local
+  esdata04:
     driver: local
   kibana:
     driver: local
+  # filebeat_data:
+    # driver: local
 networks: 
   esnet:
-    driver: bridge
