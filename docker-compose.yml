@@ -1,23 +1,39 @@
 version: '2'
 services:
   
-  logspout:  
-    image: gliderlabs/logspout:v3
-    restart: always
-    command: 'udp://logstash:5000'
-    links:
-      - logstash
-    volumes:
-      - '/var/run/docker.sock:/tmp/docker.sock'
-    environment:
-      ROUTE_URIS: logstash+tcp://logstash:5000
-    networks:
-        - docker_elk
-    depends_on:
-        - logstash
-
+  # logspout:  
+  #   image: gliderlabs/logspout:v3
+  #   restart: always
+  #   command: 'udp://logstash:5000'
+  #   links:
+  #     - logstash
+  #   volumes:
+  #     - '/var/run/docker.sock:/tmp/docker.sock'
+  #   environment:
+  #     ROUTE_URIS: logstash+tcp://logstash:5000
+  #   networks:
+  #       - docker_elk
+  #   depends_on:
+  #       - logstash
+  # filebeat:
+  #   build:
+  #     context:  ./filebeat
+  #   ulimits:
+  #       memlock:
+  #         soft: -1
+  #         hard: -1
+  #   # environment:      
+  #         #  - ELASTICSEARCH_HOST=elasticsearch:9200    
+  #          # disable strict permission checks    
+  #   # command: ["--strict.perms=false"]      
+  #   # volumes: 
+  #   #     - filebeat_data:/usr/share/filebeat/data:rw
+  #   #     - /var/lib/docker/containers/:/var/lib/docker/containers/:ro
+  #   #     - /var/run/docker.sock:/var/run/docker.sock
+  #   networks: 
+  #       - docker_elk
   kibana:  
-    image: kibana:5.6.5
+    image: kibana:6.8.0
     links:
       - 'elastic:elasticsearch'
     ports:
@@ -25,44 +41,55 @@ services:
     networks:
         - docker_elk
     
-  logstash:  
-    image: logstash:5.6.5
-    # command: 'logstash -e "input { tcp { port => 5000 } } output { elasticsearch { hosts => elastic } }"'
-    command: 'logstash -e "input { udp { port  => 5000 codec => json } tcp { port  => 5000 codec => json } } filter { mutate { rename => {\"msg\" => \"message\"} } } output {	elasticsearch { hosts => elastic } stdout { codec => rubydebug } }"'
-    # ports:
-    #     - "5000"
-    links:
-      - elastic
-    networks:
-        - docker_elk
+  # logstash:  
+  #   image: logstash:6.8.0
+  #   # command: 'logstash -e "input { tcp { port => 5000 } } output { elasticsearch { hosts => elastic } }"'
+  #   # command: 'logstash -e "input { syslog { port => 5000 type => \"docker\" } } filter { grok { match => { \"message\" => \"%{SYSLOG5424PRI}%{NONNEGINT:ver} +(?:%{TIMESTAMP_ISO8601:ts}|-) +(?:%{HOSTNAME:service}|-) +(?:%{NOTSPACE:containerName}|-) +(?:%{NOTSPACE:proc}|-) +(?:%{WORD:msgid}|-) +(?:%{SYSLOG5424SD:sd}|-|) +%{GREEDYDATA:msg}\" } } syslog_pri { } date { match => [ \"syslog_timestamp\", \"MMM  d HH:mm:ss\", \"MMM dd HH:mm:ss\" ] } mutate { remove_field => [ \"message\", \"priority\", \"ts\", \"severity\", \"facility\", \"facility_label\", \"severity_label\", \"syslog5424_pri\", \"proc\", \"syslog_severity_code\", \"syslog_facility_code\", \"syslog_facility\", \"syslog_severity\", \"syslog_hostname\", \"syslog_message\", \"syslog_timestamp\", \"ver\" ] } mutate { remove_tag => [ \"_grokparsefailure_sysloginput\" ] } mutate { gsub => [ \"service\", \"[0123456789-]\", \"\" ] } if [msg] =~ \"^ *{\" { json { source => \"msg\" } if \"_jsonparsefailure\" in [tags] { drop {} } mutate { remove_field => [ \"msg\" ] } } } output { elasticsearch { hosts => \"elastic:9200\" } }"'
+  #   environment: 
+  #     - "xpack.license.self_generated.type=basic"
+  #   volumes:
+  #     - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:rw
+  #     - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+
+  #   ports:
+  #       - "5044"
+  #   links:
+  #     - elastic
+  #   networks:
+  #       - docker_elk
+  #   restart: unless-stopped
+
 
   elastic:  
-    image: elasticsearch:5.6.5
+    image: elasticsearch:6.8.0
     environment: 
-        - "ES_JAVA_OPTS=-Xms128m -Xmx128m"
+        - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
     networks:
         - docker_elk
+    ports:
+        - "9200"
+        - "9300"
 
-  elastic2:  
-    image: elasticsearch:5.6.5
-    environment: 
-        - "ES_JAVA_OPTS=-Xms128m -Xmx128m"
-    networks:
-        - docker_elk
+  # elastic2:  
+  #   image: elasticsearch:6.8.0
+  #   environment: 
+  #       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+  #   networks:
+  #       - docker_elk
 
-  elastic3:  
-    image: elasticsearch:5.6.5
-    environment: 
-        - "ES_JAVA_OPTS=-Xms128m -Xmx128m"
-    networks:
-        - docker_elk
+  # elastic3:  
+  #   image: elasticsearch:6.8.0
+  #   environment: 
+  #       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+  #   networks:
+  #       - docker_elk
 
-  elastic4:  
-    image: elasticsearch:5.6.5
-    environment: 
-        - "ES_JAVA_OPTS=-Xms128m -Xmx128m"
-    networks:
-        - docker_elk
+  # elastic4:  
+  #   image: elasticsearch:6.8.0
+  #   environment: 
+  #       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+  #   networks:
+  #       - docker_elk
 
 
 networks:

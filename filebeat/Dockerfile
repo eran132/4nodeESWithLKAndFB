@@ -1,3 +1,3 @@
 ARG ELK_VERSION
 
-FROM elastic/filebeat:7.1.1
+FROM elastic/filebeat:6.8.0
